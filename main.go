@@ -20,6 +20,13 @@ var (
 )
 var device string
 
+type fileDisplays struct {
+	*sync.RWMutex
+	Files []fileDisplay
+}
+
+var files fileDisplays
+
 type fileDisplay struct {
 	Size int64
 	Path string
@@ -29,8 +36,6 @@ type bySize []fileDisplay
 func (a bySize) Len() int           { return len(a) }
 func (a bySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
 func (a bySize) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-
-var files []fileDisplay
 
 func main() {
 	log.SetOutput(io.Discard)
@@ -55,12 +60,12 @@ func main() {
 	var wg sync.WaitGroup
 	getFiles(*mountpoint, entries, &wg)
 	wg.Wait()
-	sort.Sort(bySize(files))
+	sort.Sort(bySize(files.Files))
 	var shortFiles []fileDisplay
-	if len(files) > *limit {
-		shortFiles = files[len(files)-*limit:]
+	if len(files.Files) > *limit {
+		shortFiles = files.Files[len(files.Files)-*limit:]
 	} else {
-		shortFiles = files
+		shortFiles = files.Files
 	}
 
 	for _, file := range shortFiles {
@@ -94,7 +99,7 @@ func handleEntry(start string, entry fs.DirEntry, wg *sync.WaitGroup) {
 			}
 			file.Path = start + entry.Name()
 			file.Size = fileInfo.Size()
-			files = append(files, file)
+			files.Append(file)
 		} else if entry.IsDir() {
 			entries, err := os.ReadDir(start + entry.Name())
 			if err != nil {
@@ -121,4 +126,11 @@ func (f *fileDisplay) DisplaySizeIEC() string {
 	}
 	return fmt.Sprintf("%.2f%ciB",
 		float64(b)/float64(div), "KMGTPE"[exp])
+}
+
+func (fd *fileDisplays) Append(item fileDisplay) {
+	fd.Lock()
+	defer fd.Unlock()
+
+	fd.Files = append(fd.Files, item)
 }
