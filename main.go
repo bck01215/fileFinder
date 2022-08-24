@@ -30,7 +30,6 @@ func (a bySize) Len() int           { return len(a) }
 func (a bySize) Less(i, j int) bool { return a[i].Size < a[j].Size }
 func (a bySize) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
-var fileChan = make(chan fileDisplay)
 var files []fileDisplay
 
 func main() {
@@ -55,18 +54,7 @@ func main() {
 	}
 	var wg sync.WaitGroup
 	getFiles(*mountpoint, entries, &wg)
-	go func() {
-		defer close(fileChan)
-		wg.Wait()
-	}()
-	var last int64
-	for file := range fileChan {
-		if file.Size > last {
-			files = append(files, file)
-		} else {
-			files = append([]fileDisplay{file}, files...)
-		}
-	}
+	wg.Wait()
 	sort.Sort(bySize(files))
 	var shortFiles []fileDisplay
 	if len(files) > *limit {
@@ -106,7 +94,7 @@ func handleEntry(start string, entry fs.DirEntry, wg *sync.WaitGroup) {
 			}
 			file.Path = start + entry.Name()
 			file.Size = fileInfo.Size()
-			fileChan <- file
+			files = append(files, file)
 		} else if entry.IsDir() {
 			entries, err := os.ReadDir(start + entry.Name())
 			if err != nil {

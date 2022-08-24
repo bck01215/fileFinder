@@ -16,7 +16,7 @@ Example use:
 
 ### ToDo
 
-- [ ] Remove iteration over items in channel bottleneck
+- [x] Remove iteration over items in channel bottleneck
 
 ### Author Information
 
