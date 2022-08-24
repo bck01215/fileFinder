@@ -21,7 +21,7 @@ var (
 var device string
 
 type fileDisplays struct {
-	*sync.RWMutex
+	sync.RWMutex
 	Files []fileDisplay
 }
 
